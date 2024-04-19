@@ -1,0 +1,38 @@
+[
+    {
+        "FalseNegativeError": 0.0,
+        "FalsePositiveError": 0.0,
+        "MeanOverlap": 1.0,
+        "UnionOverlap": 1.0,
+        "VolumeSimilarity": 0.0,
+        "JaccardCoefficient": 1.0,
+        "DiceCoefficient": 1.0,
+        "HausdorffDistance": 0.0,
+        "wfss": 0.6,
+        "nae_circumference_mm": 0.5304891291086584
+    },
+    {
+        "FalseNegativeError": 0.0,
+        "FalsePositiveError": 0.0,
+        "MeanOverlap": 1.0,
+        "UnionOverlap": 1.0,
+        "VolumeSimilarity": 0.0,
+        "JaccardCoefficient": 1.0,
+        "DiceCoefficient": 1.0,
+        "HausdorffDistance": 0.0,
+        "wfss": 1,
+        "nae_circumference_mm": 0.49877634525904774
+    },
+    {
+        "FalseNegativeError": 1.0,
+        "FalsePositiveError": 0.0,
+        "MeanOverlap": 0.0,
+        "UnionOverlap": 0.0,
+        "VolumeSimilarity": -2.0,
+        "JaccardCoefficient": 0.0,
+        "DiceCoefficient": 0.0,
+        "HausdorffDistance": Infinity,
+        "wfss": 0,
+        "nae_circumference_mm": 0.5342928067382163
+    }
+]

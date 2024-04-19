@@ -1,0 +1,143 @@
+[
+    {
+        "pk": "086c9454-4200-4f6a-8805-98a3999590a1",
+        "inputs": [
+            {
+                "file": null,
+                "image": {
+                    "name": "mask03.mha"
+                },
+                "value": null,
+                "interface": {
+                    "slug": "stacked-fetal-ultrasound",
+                    "kind": "Image",
+                    "super_kind": "Image",
+                    "relative_path": "images/stacked-fetal-ultrasound"
+                }
+            }
+        ],
+        "outputs": [
+            {
+                "file": null,
+                "image": {
+                    "name": "mask03.mha"
+                },
+                "value": null,
+                "interface": {
+                    "slug": "fetal-abdomen-segmentation",
+                    "kind": "Segmentation",
+                    "super_kind": "Image",
+                    "relative_path": "images/fetal-abdomen-segmentation"
+                }
+            },
+            {
+                "file": null,
+                "image": null,
+                "value": "{\"some_key\": \"some_value\"}",
+                "interface": {
+                    "slug": "fetal-abdomen-frame-number",
+                    "kind": "Integer",
+                    "super_kind": "Value",
+                    "relative_path": "fetal-abdomen-frame-number.json"
+                }
+            }
+        ],
+        "status": "Succeeded",
+        "started_at": "2023-11-29T10:31:25.691799Z",
+        "completed_at": "2023-11-29T10:31:50.691799Z"
+    },
+    {
+        "pk": "1cfb322a-3926-4825-b5a0-55b117ee54ea",
+        "inputs": [
+            {
+                "file": null,
+                "image": {
+                    "name": "mask01.mha"
+                },
+                "value": null,
+                "interface": {
+                    "slug": "stacked-fetal-ultrasound",
+                    "kind": "Image",
+                    "super_kind": "Image",
+                    "relative_path": "images/stacked-fetal-ultrasound"
+                }
+            }
+        ],
+        "outputs": [
+            {
+                "file": null,
+                "image": {
+                    "name": "mask01.mha"
+                },
+                "value": null,
+                "interface": {
+                    "slug": "fetal-abdomen-segmentation",
+                    "kind": "Segmentation",
+                    "super_kind": "Image",
+                    "relative_path": "images/fetal-abdomen-segmentation"
+                }
+            },
+            {
+                "file": null,
+                "image": null,
+                "value": "{\"some_key\": \"some_value\"}",
+                "interface": {
+                    "slug": "fetal-abdomen-frame-number",
+                    "kind": "Integer",
+                    "super_kind": "Value",
+                    "relative_path": "fetal-abdomen-frame-number.json"
+                }
+            }
+        ],
+        "status": "Succeeded",
+        "started_at": "2023-11-29T10:31:25.691799Z",
+        "completed_at": "2023-11-29T10:31:50.691799Z"
+    },
+    {
+        "pk": "3a13f92f-adcc-4275-818e-6baec8dd844f",
+        "inputs": [
+            {
+                "file": null,
+                "image": {
+                    "name": "mask02.mha"
+                },
+                "value": null,
+                "interface": {
+                    "slug": "stacked-fetal-ultrasound",
+                    "kind": "Image",
+                    "super_kind": "Image",
+                    "relative_path": "images/stacked-fetal-ultrasound"
+                }
+            }
+        ],
+        "outputs": [
+            {
+                "file": null,
+                "image": {
+                    "name": "mask02.mha"
+                },
+                "value": null,
+                "interface": {
+                    "slug": "fetal-abdomen-segmentation",
+                    "kind": "Segmentation",
+                    "super_kind": "Image",
+                    "relative_path": "images/fetal-abdomen-segmentation"
+                }
+            },
+            {
+                "file": null,
+                "image": null,
+                "value": "{\"some_key\": \"some_value\"}",
+                "interface": {
+                    "slug": "fetal-abdomen-frame-number",
+                    "kind": "Integer",
+                    "super_kind": "Value",
+                    "relative_path": "fetal-abdomen-frame-number.json"
+                }
+            }
+        ],
+        "status": "Succeeded",
+        "started_at": "2023-11-29T10:31:25.691799Z",
+        "completed_at": "2023-11-29T10:31:50.691799Z"
+    }
+]
