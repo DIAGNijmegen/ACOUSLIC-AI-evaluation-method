@@ -28,10 +28,10 @@ The [ACOUSLIC-AI challenge](https://acouslic-ai.grand-challenge.org/) employs a 
    \text{NAE}_{\text{AC}} = \frac{|\text{AC}_{\text{gt}} - \text{AC}_{\text{pred}}|}{\max(\text{AC}_{\text{gt}}, \text{AC}_{\text{pred}}, \epsilon)} 
 ```
   Where:
-  - $ \text{NAE}_{\text{AC}} $ is the Normalized Absolute Error for Abdominal Circumference.
-  - \( \text{AC}_{\text{gt}} \) is the ground truth Abdominal Circumference measurement — if present — in the sweep corresponding to the algorithm's selected frame.
-  - \( \text{AC}_{\text{pred}} \) is the algorithm's predicted Abdominal Circumference measurement.
-  - \( \epsilon \) is a small constant to prevent division by zero, set to \( 1 \times 10^{-6} \).
+  - ${NAE}_{\text{AC}}$ is the Normalized Absolute Error for Abdominal Circumference.
+  - ${AC}_{\text{gt}}$ is the ground truth Abdominal Circumference measurement — if present — in the sweep corresponding to the algorithm's selected frame.
+  - ${AC}_{\text{pred}}$ is the algorithm's predicted Abdominal Circumference measurement.
+  - $\epsilon$ is a small constant to prevent division by zero, set to $1 \times 10^{-6}$.
   
   A lower NAE indicates a higher accuracy in predicting the AC measurements from the segmented masks, which is crucial for clinical applicability.
 The combined use of these metrics allows for a balanced evaluation of the algorithms, not only in terms of their segmentation accuracy but also their practical utility in a clinical setting.
