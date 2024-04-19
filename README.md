@@ -24,11 +24,11 @@ The [ACOUSLIC-AI challenge](https://acouslic-ai.grand-challenge.org/) employs a 
 - **Weighted Frame Selection Score (WFSS):** WFSS evaluates the algorithm's frame selection accuracy, assigning higher scores to accurately identified and chosen clinically relevant frames. A score of 1 denotes correct identification of optimal planes, 0.6 for suboptimal plane selection when an optimal is available, and 0 for the selection of irrelevant frames when optimal/suboptimal ones are present.
 - **Hausdorff Distance (HD):** This metric measures the maximum distance between the algorithm's predicted boundary and the actual ground truth boundary, providing a sense of the largest potential error in the segmentation boundary prediction.
 - **Normalized Absolute Error (NAE):** the normalized absolute error for abdominal circumference measurements provides a scale-independent measure of the precision in abdominal circumference estimation. It's calculated by taking the absolute difference between the ground truth and the predicted circumference, normalized by the maximum of either value to account for the scale:
-
-  \[ \text{NAE}_{\text{AC}} = \frac{|\text{AC}_{\text{gt}} - \text{AC}_{\text{pred}}|}{\max(\text{AC}_{\text{gt}}, \text{AC}_{\text{pred}}, \epsilon)} \]
-
+```math
+   \text{NAE}_{\text{AC}} = \frac{|\text{AC}_{\text{gt}} - \text{AC}_{\text{pred}}|}{\max(\text{AC}_{\text{gt}}, \text{AC}_{\text{pred}}, \epsilon)} 
+```
   Where:
-  - \( \text{NAE}_{\text{AC}} \) is the Normalized Absolute Error for Abdominal Circumference.
+  - $ \text{NAE}_{\text{AC}} $ is the Normalized Absolute Error for Abdominal Circumference.
   - \( \text{AC}_{\text{gt}} \) is the ground truth Abdominal Circumference measurement — if present — in the sweep corresponding to the algorithm's selected frame.
   - \( \text{AC}_{\text{pred}} \) is the algorithm's predicted Abdominal Circumference measurement.
   - \( \epsilon \) is a small constant to prevent division by zero, set to \( 1 \times 10^{-6} \).
