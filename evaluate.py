@@ -52,8 +52,9 @@ def main():
     with Pool(processes=4) as pool:
         metrics["results"] = pool.map(process, predictions)
 
-    # Now generate an overall score(s) for this submission
+    # Now generate the overall scores for this submission
     metrics = metrics["results"]
+    metrics = aggregate_metrics(metrics)
 
     # Make sure to save the metrics
     write_metrics(metrics=metrics)
@@ -161,6 +162,34 @@ def process(job):
     print('#'*100)
 
     return all_metrics
+
+
+def aggregate_metrics(results, specific_metrics=None):
+    """
+    Aggregates metrics from multiple result dictionaries.
+
+    Args:
+        results (list of dict): A list containing dictionaries of metrics for each result.
+        specific_metrics (list of str, optional): List of specific metrics to aggregate. If None, aggregates all metrics.
+
+    Returns:
+        dict: A dictionary containing the mean of each metric across all results.
+    """
+    # Compile all computed metrics from the results into a single dictionary for output
+    all_metrics = {}
+    for result in results:
+        for key, value in result.items():
+            if specific_metrics is None or key in specific_metrics:
+                if key in all_metrics:
+                    all_metrics[key].append(value)
+                else:
+                    all_metrics[key] = [value]
+
+    # Calculate mean of each metric to aggregate them
+    aggregated_metrics = {metric: sum(values) / len(values)
+                          for metric, values in all_metrics.items()}
+
+    return aggregated_metrics
 
 
 def print_inputs():

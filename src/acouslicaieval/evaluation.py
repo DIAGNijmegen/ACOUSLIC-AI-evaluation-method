@@ -8,7 +8,7 @@ from evalutils.validators import (
     UniquePathIndicesValidator,
 )
 
-from acouslicaieval.ellipse_fitting import fit_ellipses, pixels_to_mm
+from acouslicaieval.ellipse_fitting import MASK_FOV, fit_ellipses, pixels_to_mm
 
 
 class FetalAbdomenSegmentationEval(ClassificationEvaluation):
@@ -48,6 +48,12 @@ class FetalAbdomenSegmentationEval(ClassificationEvaluation):
         caster.SetNumberOfThreads(1)
         gt = caster.Execute(gt)
         pred = caster.Execute(pred)
+
+        # Apply FOV masking
+        mask_fov_itk = SimpleITK.GetImageFromArray(MASK_FOV)
+        mask_fov_itk = caster.Execute(mask_fov_itk)
+        gt = SimpleITK.Mask(gt, mask_fov_itk)
+        pred = SimpleITK.Mask(pred, mask_fov_itk)
 
         # Initialize overlap measures and compute metrics
         overlap_measures = SimpleITK.LabelOverlapMeasuresImageFilter()
@@ -169,10 +175,12 @@ def calculate_ellipse_circumference_mm(segmentation_mask, pixel_spacing):
 
     return circumference_mm
 
+
 def find_sweep_index(fetal_abdomen_frame_number):
     # Fixed constant sweep indices
-    sweep_indices = {1: (0, 140), 2: (140, 280), 3: (280, 420), 4: (420, 560), 5: (560, 700), 6: (700, 840)}
-    
+    sweep_indices = {1: (0, 140), 2: (140, 280), 3: (
+        280, 420), 4: (420, 560), 5: (560, 700), 6: (700, 840)}
+
     # Check which sweep index the frame number belongs to
     for sweep_index, (start, end) in sweep_indices.items():
         if start <= fetal_abdomen_frame_number < end:
