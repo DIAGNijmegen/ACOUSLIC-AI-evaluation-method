@@ -56,6 +56,16 @@ def main():
     metrics = metrics["results"]
     metrics = aggregate_metrics(metrics)
 
+    # Create score = 0.5 * nae_circumference + 0.25 * DiceCoefficient + 0.25 * wfss
+    metrics["score"] = {"mean":
+                        0.5 * metrics["nae_circumference"]["mean"] +
+                        0.25 * metrics["DiceCoefficient"]["mean"] +
+                        0.25 * metrics["wfss"]["mean"],
+                        "std": 0.5 * metrics["nae_circumference"]["std"] +
+                        0.25 * metrics["DiceCoefficient"]["std"] +
+                        0.25 * metrics["wfss"]["std"]
+                        }
+
     # Make sure to save the metrics
     write_metrics(metrics=metrics)
 
@@ -106,7 +116,11 @@ def process(job):
     sweep_index = eval.find_sweep_index(fetal_abdomen_frame_number)
 
     # Get the mask corresponding to the selected frame number (we saved it as 3d for visualization purposes)
-    fetal_abdomen_segmentation = fetal_abdomen_segmentation[fetal_abdomen_frame_number]
+    if sweep_index is not None and fetal_abdomen_frame_number != -1:
+        fetal_abdomen_segmentation = fetal_abdomen_segmentation[fetal_abdomen_frame_number]
+    else:  # return empty mask if no (valid) frame number is provided
+        fetal_abdomen_segmentation = np.zeros_like(
+            fetal_abdomen_segmentation[0])
 
     # 3. Retrieve the input image name to match it with an image and reference measurement in the ground truth
     stacked_fetal_ultrasound_image_name = get_image_name(
@@ -123,21 +137,20 @@ def process(job):
     fetal_abdominal_circumference_pred = eval.calculate_ellipse_circumference_mm(
         fetal_abdomen_segmentation, PIXEL_SPACING)
 
-    # Log a warning if no valid circumference could be calculated.
-    if fetal_abdominal_circumference_pred is None:
-        fetal_abdominal_circumference_pred = 0
-        print("No valid circumferences calculated.")
-
-    # Assign a default value of 0 if the ground truth circumference is not available
-    if fetal_abdominal_circumference_gt is None:
-        fetal_abdominal_circumference_gt = 0
-
     # 6. Compute the normalized absolute error (NAE) of the circumference
-    ae_circumference = np.abs(
-        fetal_abdominal_circumference_gt - fetal_abdominal_circumference_pred) if fetal_abdominal_circumference_pred is not None else float('inf')
-    nae_circumference = ae_circumference / \
-        max(fetal_abdominal_circumference_gt,
-            fetal_abdominal_circumference_pred, 1e-6)
+    # Set the nae_circumference to 1 (worst score) if no predicted circumference or ground truth are available
+    if fetal_abdominal_circumference_pred is None or fetal_abdominal_circumference_gt is None:
+        nae_circumference = 1
+        # Log a warning if no valid circumference could be calculated.
+        if fetal_abdominal_circumference_pred is None:
+            print("No valid circumferences calculated.")
+    else:
+        # Calculate the normalized absolute error (NAE) of the circumference
+        ae_circumference = np.abs(
+            fetal_abdominal_circumference_gt - fetal_abdominal_circumference_pred)
+        nae_circumference = ae_circumference / \
+            max(fetal_abdominal_circumference_gt,
+                fetal_abdominal_circumference_pred, 1e-6)
 
     # 7. Compute overlap metrics using the provided segmentation and the ground truth
     metrics_overlap = eval.FetalAbdomenSegmentationEval().score_case(gt_array=fetal_abdomen_segmentation_gt,
@@ -151,7 +164,7 @@ def process(job):
     all_metrics = dict(metrics_overlap)
     all_metrics.update({
         "wfss": wfss,
-        "nae_circumference_mm": nae_circumference
+        "nae_circumference": nae_circumference
     })
 
     # Print and log the computed metrics for the current job
@@ -185,9 +198,12 @@ def aggregate_metrics(results, specific_metrics=None):
                 else:
                     all_metrics[key] = [value]
 
-    # Calculate mean of each metric to aggregate them
-    aggregated_metrics = {metric: sum(values) / len(values)
-                          for metric, values in all_metrics.items()}
+    # Calculate mean and standard deviation of each metric to aggregate them
+    aggregated_metrics = {}
+    for metric, values in all_metrics.items():
+        mean_value = np.mean(values)
+        std_value = np.std(values)
+        aggregated_metrics[metric] = {"mean": mean_value, "std": std_value}
 
     return aggregated_metrics
 

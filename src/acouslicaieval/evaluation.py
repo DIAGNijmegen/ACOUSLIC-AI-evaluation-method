@@ -10,6 +10,10 @@ from evalutils.validators import (
 
 from acouslicaieval.ellipse_fitting import MASK_FOV, fit_ellipses, pixels_to_mm
 
+# Maximum frame tolerance for the selected frame with respect to the next optimal
+# frame in the ground truth, within the same sweep
+MAX_FRAME_TOLERANCE = 15
+
 
 class FetalAbdomenSegmentationEval(ClassificationEvaluation):
     """Evaluation class for fetal abdomen segmentation masks."""
@@ -69,16 +73,45 @@ class FetalAbdomenSegmentationEval(ClassificationEvaluation):
             'DiceCoefficient': overlap_measures.GetDiceCoefficient(),
         }
 
-        # Compute Hausdorff distance if both segmentations contain labels
-        if np.any(SimpleITK.GetArrayFromImage(gt)) and np.any(SimpleITK.GetArrayFromImage(pred)):
-            hausdorff_calculator = SimpleITK.HausdorffDistanceImageFilter()
-            hausdorff_calculator.SetNumberOfThreads(1)
-            hausdorff_calculator.Execute(gt, pred)
-            metrics['HausdorffDistance'] = hausdorff_calculator.GetHausdorffDistance()
-        else:
-            metrics['HausdorffDistance'] = float(
-                'inf')  # Handle empty segmentation case
+        # Instantiate Hausdorff distance calculator
+        hausdorff_calculator = SimpleITK.HausdorffDistanceImageFilter()
+        hausdorff_calculator.SetNumberOfThreads(1)
 
+        # Compute Hausdorff distance on selected ground truth frame if it contains an annotation
+        if np.any(gt) and np.any(pred):
+            # Compute the distance to the next optimal frame
+            hausdorff_calculator.Execute(gt, pred)
+            hausdorff_distance = hausdorff_calculator.GetHausdorffDistance()
+        elif not np.any(SimpleITK.GetArrayFromImage(pred)):
+            # If the prediction is empty, set the Hausdorff distance to maximum sweep width (744)
+            # scaled by the frame tolerance
+            hausdorff_distance = 744 * MAX_FRAME_TOLERANCE
+            print('Prediction is empty. Setting Hausdorff distance to maximum sweep width (744) scaled by the frame tolerance.')
+        elif not np.any(SimpleITK.GetArrayFromImage(gt)):
+            # If the ground truth is empty for the selected frame,
+            # find next optimal frame in the ground truth, within the same sweep
+            sweep_index = find_sweep_index(frame)
+            nearest_frame = find_closest_annotated_frame(
+                gt_array, sweep_index, frame)
+            print('Ground truth is empty. Nearest annotated frame:', nearest_frame)
+
+            # If there is no next optimal frame, set the Hausdorff distance to maximum sweep width (744)
+            if nearest_frame is None:
+                hausdorff_distance = 744 * MAX_FRAME_TOLERANCE
+                print('No nearest optimal frame found. Setting Hausdorff distance to maximum sweep width (744) scaled by the frame tolerance.')
+
+            else:
+                gt_nearest_frame = gt_array[nearest_frame].copy()
+                gt_nearest_frame[gt_nearest_frame > 0] = 1
+                gt_nearest_frame = SimpleITK.GetImageFromArray(
+                    gt_nearest_frame)
+                gt_nearest_frame = caster.Execute(gt_nearest_frame)
+
+                # Compute the distance to the next optimal frame
+                hausdorff_calculator.Execute(gt_nearest_frame, pred)
+                hausdorff_distance = hausdorff_calculator.GetHausdorffDistance() * \
+                    (nearest_frame - frame)
+        metrics['HausdorffDistance'] = hausdorff_distance
         return metrics
 
 
@@ -186,3 +219,40 @@ def find_sweep_index(fetal_abdomen_frame_number):
         if start <= fetal_abdomen_frame_number < end:
             return sweep_index
     return None  # Return None if the frame number doesn't belong to any sweep
+
+
+def find_closest_annotated_frame(gt_array, sweep_index, frame):
+    # Define the sweep boundaries
+    sweep_indices = {1: (0, 140), 2: (140, 280), 3: (280, 420),
+                     4: (420, 560), 5: (560, 700), 6: (700, 840)}
+
+    # Get the start and end frame indices for the current sweep
+    start_index, end_index = sweep_indices[sweep_index]
+
+    # Calculate actual search boundaries considering the frame tolerance
+    search_start = max(start_index, frame - MAX_FRAME_TOLERANCE)
+    search_end = min(end_index, frame + MAX_FRAME_TOLERANCE + 1)
+
+    # Initialize variables to store the closest next and previous annotated frames
+    next_annotated_frame = None
+    previous_annotated_frame = None
+
+    # Search forward wuthin the frame tolerance
+    for next_frame in range(frame + 1, search_end):
+        if np.any(gt_array[next_frame]):
+            next_annotated_frame = next_frame
+            break
+
+    # Search backward within the frame tolerance
+    for prev_frame in range(frame - 1, search_start - 1, -1):
+        if np.any(gt_array[prev_frame]):
+            previous_annotated_frame = prev_frame
+            break
+
+    # Decide which annotated frame is closest
+    if previous_annotated_frame is None and next_annotated_frame is None:
+        return None
+    elif previous_annotated_frame is None:
+        return next_annotated_frame
+    else:
+        return previous_annotated_frame
