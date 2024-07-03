@@ -29,8 +29,8 @@ def fit_ellipses(binary_mask, thickness=1):
     if len(contours_non_truncated) > 5:   # At least 5 points are required to fit an ellipse
         ellipse = cv2.fitEllipse(contours_non_truncated)
         if not any(math.isnan(param) for param in ellipse[1]):
-            a = ellipse[1][0]  # Semi-major axis
-            b = ellipse[1][1]  # Semi-minor axis
+            a = ellipse[1][0] / 2 # Semi-major axis
+            b = ellipse[1][1] / 2 # Semi-minor axis
 
             # Calculate the estimated circumference of the ellipse
             circumference = ellipse_circumference(a, b)
