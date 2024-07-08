@@ -56,12 +56,12 @@ def main():
     metrics = metrics["results"]
     metrics = aggregate_metrics(metrics)
 
-    # Create score = 0.5 * nae_circumference + 0.25 * DiceCoefficient + 0.25 * wfss
+    # Create score = 0.5 * (1 - nae_circumference) + 0.25 * DiceCoefficient + 0.25 * wfss
     metrics["score"] = {"mean":
-                        0.5 * metrics["nae_circumference"]["mean"] +
+                        0.5 * (1 - metrics["nae_circumference"]["mean"]) +
                         0.25 * metrics["DiceCoefficient"]["mean"] +
                         0.25 * metrics["wfss"]["mean"],
-                        "std": 0.5 * metrics["nae_circumference"]["std"] +
+                        "std": 0.5 * (1 - metrics["nae_circumference"]["std"]) +
                         0.25 * metrics["DiceCoefficient"]["std"] +
                         0.25 * metrics["wfss"]["std"]
                         }

@@ -27,7 +27,7 @@ The [ACOUSLIC-AI challenge](https://acouslic-ai.grand-challenge.org/) employs a 
 - **Dice Similarity Coefficient (DSC):** This metric quantifies the spatial overlap accuracy of the algorithm's segmentation against the ground truth mask. A higher DSC indicates a closer match to the ground truth and thus a better segmentation performance. It's important to note that the ground truth mask, if available, corresponds to the annotation in the specified frame of the fetal abdomen stack (i.e., this metric is computed on the 2D ground truth and prediction masks corresponding to the fetal frame number). For this comparison, the ground truth mask is converted to a binary format (1 representing the fetal abdomen and 0 representing the background). 
 - **Weighted Frame Selection Score (WFSS):** WFSS evaluates the algorithm's frame selection accuracy, assigning higher scores to accurately identified and chosen clinically relevant frames. A score of 1 denotes correct identification of optimal planes, 0.6 for suboptimal plane selection when an optimal is available, and 0 for the selection of irrelevant frames when optimal/suboptimal ones are present.
 - **Hausdorff Distance (HD):** This metric measures the maximum distance between the algorithm's predicted fetal adomen mask boundary and the actual ground truth boundary in the selected frame, providing a sense of the largest potential error in the segmentation boundary prediction. Similarly to the computation of the DICE coefficient, the 2D ground truth mask in the selected frame is converted to a binary format for evaluation against the 2D predicted mask. Additionally, only the pixels within the field of view of the ultrasound beam are considered during this process.
-- **Normalized Absolute Error (NAE):** the normalized absolute error for abdominal circumference measurements provides a scale-independent measure of the precision in abdominal circumference estimation. It's calculated by taking the absolute difference between the ground truth and the predicted circumference, normalized by the maximum of either value to account for the scale:
+- **Normalized Absolute Error (${NAE}_{\text{AC}}$):** the normalized absolute error for abdominal circumference measurements provides a scale-independent measure of the precision in abdominal circumference estimation. It's calculated by taking the absolute difference between the ground truth and the predicted circumference, normalized by the maximum of either value to account for the scale:
 ```math
    \text{NAE}_{\text{AC}} = \frac{|\text{AC}_{\text{gt}} - \text{AC}_{\text{pred}}|}{\max(\text{AC}_{\text{gt}}, \text{AC}_{\text{pred}}, \epsilon)} 
 ```
@@ -41,6 +41,14 @@ The [ACOUSLIC-AI challenge](https://acouslic-ai.grand-challenge.org/) employs a 
   **Note:** The predicted abdominal circumference used to compute this metric is measured using the `fit_ellipses` function in the [ellipse fitting tool](src/acouslicaieval/ellipse_fitting.py) provided in this repository. Ellipses extending beyond the field of view of the ultrasound beam are extrapollated using the contour points contained within the FOV.
 
 The combined use of these metrics allows for a balanced evaluation of the algorithms, not only in terms of their segmentation accuracy but also their practical utility in a clinical setting.
+
+## Ranking method
+The performance rank for algorithms submitted to the ACOUSLIC-AI challenge is determined based on the following composite score:
+```math
+score = 0.5 * (1 - \text{NAE}_{\text{AC}}) + 0.25 * WFSS + 0.25 * DSC
+```
+
+The weight assignment prioritizes the accuracy of fetal abdominal circumference measurements (${NAE}_{\text{AC}}$) as the most critical factor, underscoring the importance of precise clinical measurement. Following this, equal importance is assigned to the clinical relevance of the frame selection (WFSS), which ensures the selection of the most appropriate planes for assessment, and the accuracy of the delineated fetal abdomen masks (DSC). These metrics mirror the steps that an expert would take to provide an abdominal circumference measurement for a specific case. While the geometric accuracy of boundary delineation (HD) is not included in the ranking, it is provided as an additional metric for comparing algorithm performance.
 
 ## Execution Environment
 The evaluation is performed in a containerized environment to ensure consistency. To run the evaluation locally, use the following command:
@@ -68,4 +76,4 @@ Below is a description of the key directories and files within this repository:
     - Compares the predicted data to the ground truth: The script evaluates the predicted masks and the circumference measurements against the ground truth data. This includes comparing the segmentation accuracy of the abdomen, the classification accuracy of the selected frames, and the estimation error in the AC measurements.
 
 ## License
-This project is licensed under the [LICENSE](https://github.com/DIAGNijmegen/ACOUSLIC-AI-evaluation-method/blob/main/LICENSE) file contained in the repository.
+This project is licensed under the [LICENSE](LICENSE) file contained in the repository.
