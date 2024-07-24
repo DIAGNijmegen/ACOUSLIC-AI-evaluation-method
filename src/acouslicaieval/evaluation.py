@@ -71,6 +71,9 @@ class FetalAbdomenSegmentationEval(ClassificationEvaluation):
             'VolumeSimilarity': overlap_measures.GetVolumeSimilarity(),
             'JaccardCoefficient': overlap_measures.GetJaccardCoefficient(),
             'DiceCoefficient': overlap_measures.GetDiceCoefficient(),
+            'DiceCoefficientNearestFrame': overlap_measures.GetDiceCoefficient(),
+            'NearestAnnotatedFrame': frame,
+            'DiceCoefficientSoft': overlap_measures.GetDiceCoefficient(),
         }
 
         # Instantiate Hausdorff distance calculator
@@ -86,19 +89,19 @@ class FetalAbdomenSegmentationEval(ClassificationEvaluation):
             # If the prediction is empty, set the Hausdorff distance to maximum sweep width (744)
             # scaled by the frame tolerance
             hausdorff_distance = 744 * MAX_FRAME_TOLERANCE
-            print('Prediction is empty. Setting Hausdorff distance to maximum sweep width (744) scaled by the frame tolerance.')
+            # print('Prediction is empty. Setting Hausdorff distance to maximum sweep width (744) scaled by the frame tolerance.')
         elif not np.any(SimpleITK.GetArrayFromImage(gt)):
             # If the ground truth is empty for the selected frame,
             # find next optimal frame in the ground truth, within the same sweep
             sweep_index = find_sweep_index(frame)
             nearest_frame = find_closest_annotated_frame(
                 gt_array, sweep_index, frame)
-            print('Ground truth is empty. Nearest annotated frame:', nearest_frame)
+            # print('Ground truth is empty. Nearest annotated frame:', nearest_frame)
 
             # If there is no next optimal frame, set the Hausdorff distance to maximum sweep width (744)
             if nearest_frame is None:
                 hausdorff_distance = 744 * MAX_FRAME_TOLERANCE
-                print('No nearest optimal frame found. Setting Hausdorff distance to maximum sweep width (744) scaled by the frame tolerance.')
+                # print('No nearest optimal frame found. Setting Hausdorff distance to maximum sweep width (744) scaled by the frame tolerance.')
 
             else:
                 gt_nearest_frame = gt_array[nearest_frame].copy()
@@ -111,6 +114,18 @@ class FetalAbdomenSegmentationEval(ClassificationEvaluation):
                 hausdorff_calculator.Execute(gt_nearest_frame, pred)
                 hausdorff_distance = hausdorff_calculator.GetHausdorffDistance() * \
                     (nearest_frame - frame)
+
+                # Compute dice coefficient for the nearest annotated frame
+                overlap_measures.Execute(gt_nearest_frame, pred)
+                dice_coefficient_nearest_frame = overlap_measures.GetDiceCoefficient()
+                # Adjust Dice score with a coefficient based on the distance between frames
+                distance_coefficient = 1 - \
+                    abs(nearest_frame - frame) / MAX_FRAME_TOLERANCE
+                dice_coefficient_soft = dice_coefficient_nearest_frame * distance_coefficient
+                metrics['DiceCoefficientNearestFrame'] = dice_coefficient_nearest_frame
+                metrics['NearestAnnotatedFrame'] = nearest_frame
+                metrics['DiceCoefficientSoft'] = dice_coefficient_soft
+
         metrics['HausdorffDistance'] = hausdorff_distance
         return metrics
 
@@ -199,7 +214,6 @@ def calculate_ellipse_circumference_mm(segmentation_mask, pixel_spacing):
     _, circumference, _ = fit_ellipses(segmentation_mask)
 
     if circumference is None:
-        print("No circumferences found.")
         return None  # Handle cases with no circumferences
 
     # Convert the largest circumference from pixels to millimeters

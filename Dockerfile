@@ -9,7 +9,6 @@ USER user
 WORKDIR /opt/app
 
 COPY --chown=user:user requirements.txt /opt/app/
-COPY --chown=user:user ground_truth /opt/app/ground_truth
 COPY --chown=user:user data /opt/app/data
 
 # Install Python dependencies in requirements.txt
@@ -34,6 +33,8 @@ RUN python -m pip install \
 # Install opencv 
 RUN python -m pip install --user opencv_python
 RUN python -m pip install --user opencv-python-headless
+
+ENV GRAND_CHALLENGE_MAX_WORKERS=4
 
 # Run the evaluation script
 ENTRYPOINT ["python", "evaluate.py"]

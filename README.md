@@ -24,9 +24,34 @@ Algorithms evaluated in this software package are expected to provide the follow
 ## Evaluation Metrics
 The [ACOUSLIC-AI challenge](https://acouslic-ai.grand-challenge.org/) employs a comprehensive suite of metrics to evaluate the performance of the participating algorithms:
 
-- **Dice Similarity Coefficient (DSC):** This metric quantifies the spatial overlap accuracy of the algorithm's segmentation against the ground truth mask. A higher DSC indicates a closer match to the ground truth and thus a better segmentation performance. It's important to note that the ground truth mask, if available, corresponds to the annotation in the specified frame of the fetal abdomen stack (i.e., this metric is computed on the 2D ground truth and prediction masks corresponding to the fetal frame number). For this comparison, the ground truth mask is converted to a binary format (1 representing the fetal abdomen and 0 representing the background). 
+- **Soft Dice Similarity Coefficient (DSC_soft):** This metric quantifies the spatial overlap accuracy of the algorithm's segmentation against the ground truth mask. A higher DSC indicates a closer match to the ground truth and thus a better segmentation performance. 
+
+In this implementation, the DSC is computed on a binary format where the ground truth mask (if available) corresponds to the fetal abdomen in the specified frame of the fetal abdomen stack. The ground truth and predicted masks are first converted to binary form (1 for the fetal abdomen, 0 for the background) before calculation.
+
+If no annotation is found in the same frame as the predicted mask, the DSC is computed for the nearest annotated frame within the same sweep and a maximum distance (max_frame_tolerance) of 15 frames. The DSC is then adjusted by a coefficient based on the distance between the current frame and the nearest annotated frame:
+
+```math
+DSC_{soft} = DSC_{nearest\ frame} \left(1 - \frac{|nearest\ frame - predicted\ frame|}{max\_frame\_tolerance}\right)
+```
+This coefficient scales the DSC down based on the distance between the predicted and nearest annotated frames, acknowledging that predictions made further from the annotated frames might be less accurate.
+
 - **Weighted Frame Selection Score (WFSS):** WFSS evaluates the algorithm's frame selection accuracy, assigning higher scores to accurately identified and chosen clinically relevant frames. A score of 1 denotes correct identification of optimal planes, 0.6 for suboptimal plane selection when an optimal is available, and 0 for the selection of irrelevant frames when optimal/suboptimal ones are present.
-- **Hausdorff Distance (HD):** This metric measures the maximum distance between the algorithm's predicted fetal adomen mask boundary and the actual ground truth boundary in the selected frame, providing a sense of the largest potential error in the segmentation boundary prediction. Similarly to the computation of the DICE coefficient, the 2D ground truth mask in the selected frame is converted to a binary format for evaluation against the 2D predicted mask. Additionally, only the pixels within the field of view of the ultrasound beam are considered during this process.
+
+- **Hausdorff Distance (HD):** This metric measures the maximum distance between the algorithm's predicted fetal adomen mask boundary and the actual ground truth boundary in the selected frame, providing a sense of the largest potential error in the segmentation boundary prediction. The HD is calculated between the predicted and ground truth masks in their binary forms, considering only the pixels within the field of view of the ultrasound beam. If the ground truth annotation is not available in the same frame as the predicted mask, the nearest annotated frame within the same sweep and a maximum distance (max_frame_tolerance) of 15 frames is used. \
+Special Cases:
+
+    - If the ground truth mask is not available in the same frame as the predicted mask, the nearest annotated frame is used. The HD is then scaled by a coefficient:
+
+```math
+HD_{scaled} = HD_{nearest\ frame} (nearest\ frame - predicted\ frame)
+```
+    This scaling accounts for the increased potential error due to the distance between the current and nearest annotated frames.
+
+    - If no nearest annotated frame is available, or if the predicted mask is empty, the HD is set to the maximum possible value, defined as the maximum sweep width (744) scaled by the frame tolerance:
+
+```math
+HD_{max} = 744 \cdot max\_frame\_tolerance
+```
 - **Normalized Absolute Error (${NAE}_{\text{AC}}$):** the normalized absolute error for abdominal circumference measurements provides a scale-independent measure of the precision in abdominal circumference estimation. It's calculated by taking the absolute difference between the ground truth and the predicted circumference, normalized by the maximum of either value to account for the scale:
 ```math
    \text{NAE}_{\text{AC}} = \frac{|\text{AC}_{\text{gt}} - \text{AC}_{\text{pred}}|}{\max(\text{AC}_{\text{gt}}, \text{AC}_{\text{pred}}, \epsilon)} 
@@ -45,10 +70,10 @@ The combined use of these metrics allows for a balanced evaluation of the algori
 ## Ranking method
 The performance rank for algorithms submitted to the ACOUSLIC-AI challenge is determined based on the following composite score:
 ```math
-score = 0.5 * (1 - \text{NAE}_{\text{AC}}) + 0.25 * WFSS + 0.25 * DSC
+score = 0.5 * (1 - \text{NAE}_{\text{AC}}) + 0.25 * WFSS + 0.25 * \text{DSC}_{\text{soft}}
 ```
 
-The weight assignment prioritizes the accuracy of fetal abdominal circumference measurements (${NAE}_{\text{AC}}$) as the most critical factor, underscoring the importance of precise clinical measurement. Following this, equal importance is assigned to the clinical relevance of the frame selection (WFSS), which ensures the selection of the most appropriate planes for assessment, and the accuracy of the delineated fetal abdomen masks (DSC). These metrics mirror the steps that an expert would take to provide an abdominal circumference measurement for a specific case. While the geometric accuracy of boundary delineation (HD) is not included in the ranking, it is provided as an additional metric for comparing algorithm performance.
+The weight assignment prioritizes the accuracy of fetal abdominal circumference measurements (${NAE}_{\text{AC}}$) as the most critical factor, underscoring the importance of precise clinical measurement. Following this, equal importance is assigned to the clinical relevance of the frame selection (WFSS), which ensures the selection of the most appropriate planes for assessment, and the accuracy of the delineated fetal abdomen masks (${DSC}_{\text{soft}}$). These metrics mirror the steps that an expert would take to provide an abdominal circumference measurement for a specific case. While the geometric accuracy of boundary delineation (HD) is not included in the ranking, it is provided as an additional metric for comparing algorithm performance.
 
 ## Execution Environment
 The evaluation is performed in a containerized environment to ensure consistency. To run the evaluation locally, use the following command:
@@ -76,4 +101,4 @@ Below is a description of the key directories and files within this repository:
     - Compares the predicted data to the ground truth: The script evaluates the predicted masks and the circumference measurements against the ground truth data. This includes comparing the segmentation accuracy of the abdomen, the classification accuracy of the selected frames, and the estimation error in the AC measurements.
 
 ## License
-This project is licensed under the [LICENSE](LICENSE) file contained in the repository.
+This project is licensed under the [LICENSE](https://github.com/DIAGNijmegen/ACOUSLIC-AI-evaluation-method/blob/main/LICENSE) file contained in the repository.

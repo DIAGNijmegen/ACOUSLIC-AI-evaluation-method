@@ -19,25 +19,25 @@ a Docker container and save it using:
 """
 import json
 from glob import glob
-from multiprocessing import Pool
 from pathlib import Path
-from pprint import pformat, pprint
+from pprint import pprint
 
 import acouslicaieval.evaluation as eval
 import numpy as np
 import SimpleITK
+from acouslicaieval.helpers import run_prediction_processing
 
 # Define input and output directories
 INPUT_DIRECTORY = Path("/input")
 OUTPUT_DIRECTORY = Path("/output")
-GROUND_TRUTH_DIRECTORY = Path("ground_truth")
+GROUND_TRUTH_DIRECTORY = Path("/opt/ml/input/data/ground_truth/ground_truth")
 
 # Pixel spacing is defined for converting pixel measurements to millimeters
 PIXEL_SPACING = 0.28
 
 
 def main():
-    print_inputs()
+    # print_inputs()
 
     metrics = {}
     predictions = read_predictions()
@@ -46,23 +46,23 @@ def main():
     # Note that the jobs are not in any order!
     # We work that out from predictions.json
 
-    # Start a number of process workers, using multiprocessing
-    # The optimal number of workers ultimately depends on how many
-    # resources each process() would call upon
-    with Pool(processes=4) as pool:
-        metrics["results"] = pool.map(process, predictions)
+    # Use concurrent workers to process the predictions more efficiently
+    metrics["results"] = run_prediction_processing(
+        fn=process, predictions=predictions)
 
     # Now generate the overall scores for this submission
     metrics = metrics["results"]
-    metrics = aggregate_metrics(metrics)
+    specific_metrics = [metric for metric in metrics[0].keys() if metric not in [
+        "NearestAnnotatedFrame"]]
+    metrics = aggregate_metrics(metrics, specific_metrics=specific_metrics)
 
     # Create score = 0.5 * (1 - nae_circumference) + 0.25 * DiceCoefficient + 0.25 * wfss
     metrics["score"] = {"mean":
                         0.5 * (1 - metrics["nae_circumference"]["mean"]) +
-                        0.25 * metrics["DiceCoefficient"]["mean"] +
+                        0.25 * metrics["DiceCoefficientSoft"]["mean"] +
                         0.25 * metrics["wfss"]["mean"],
                         "std": 0.5 * (1 - metrics["nae_circumference"]["std"]) +
-                        0.25 * metrics["DiceCoefficient"]["std"] +
+                        0.25 * metrics["DiceCoefficientSoft"]["std"] +
                         0.25 * metrics["wfss"]["std"]
                         }
 
@@ -84,9 +84,12 @@ def process(job):
     """
 
     # Begin processing and log the job details for reference.
-    report = "Processing:\n"
-    report += pformat(job)
-    report += "\n"
+    # report = "Processing:\n"
+    # report += pformat(job)
+    # report += "\n"
+
+    # Initialize a dictionary to store debug information for the current job
+    debug_dict = {}
 
     # 1. Determine the location of the segmentation and frame number results
     fetal_abdomen_segmentation_location = get_file_location(
@@ -143,7 +146,7 @@ def process(job):
         nae_circumference = 1
         # Log a warning if no valid circumference could be calculated.
         if fetal_abdominal_circumference_pred is None:
-            print("No valid circumferences calculated.")
+            debug_dict['warning'] = "No valid circumference calculated."
     else:
         # Calculate the normalized absolute error (NAE) of the circumference
         ae_circumference = np.abs(
@@ -151,7 +154,6 @@ def process(job):
         nae_circumference = ae_circumference / \
             max(fetal_abdominal_circumference_gt,
                 fetal_abdominal_circumference_pred, 1e-6)
-
     # 7. Compute overlap metrics using the provided segmentation and the ground truth
     metrics_overlap = eval.FetalAbdomenSegmentationEval().score_case(gt_array=fetal_abdomen_segmentation_gt,
                                                                      pred=fetal_abdomen_segmentation, frame=fetal_abdomen_frame_number)
@@ -167,12 +169,35 @@ def process(job):
         "nae_circumference": nae_circumference
     })
 
+    # Add debug information for the current job
+    debug_dict['image_name'] = stacked_fetal_ultrasound_image_name
+    debug_dict['frame_number'] = fetal_abdomen_frame_number
+    debug_dict['sweep_index'] = sweep_index
+    debug_dict['segmentation_gt_at_frame'] = np.unique(
+        fetal_abdomen_segmentation_gt[fetal_abdomen_frame_number])
+    debug_dict['segmentation_pred_at_frame'] = np.unique(
+        fetal_abdomen_segmentation)
+    debug_dict['circumference_gt'] = fetal_abdominal_circumference_gt
+    debug_dict['circumference_pred'] = fetal_abdominal_circumference_pred
+    debug_dict['nae_circumference'] = nae_circumference
+    debug_dict['wfss'] = wfss
+    debug_dict['dice'] = metrics_overlap['DiceCoefficient']
+    debug_dict['hausdorff'] = metrics_overlap['HausdorffDistance']
+    debug_dict['dice_nearest_frame'] = metrics_overlap['DiceCoefficientNearestFrame']
+    debug_dict['nearest_annotated_frame'] = metrics_overlap['NearestAnnotatedFrame']
+    debug_dict['dice_soft'] = metrics_overlap['DiceCoefficientSoft']
+
+    # Print all information for debugging
+    print('#'*100)
+    pprint(debug_dict)
+    print('#'*100)
+
     # Print and log the computed metrics for the current job
-    print('#'*100)
-    print('Metrics for file:', stacked_fetal_ultrasound_image_name)
-    pprint(all_metrics)
-    print(report)
-    print('#'*100)
+    # print('#'*100)
+    # print('Metrics for file:', stacked_fetal_ultrasound_image_name)
+    # pprint(all_metrics)
+    # print(report)
+    # print('#'*100)
 
     return all_metrics
 

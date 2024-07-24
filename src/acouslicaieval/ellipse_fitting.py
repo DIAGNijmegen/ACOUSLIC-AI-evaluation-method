@@ -29,8 +29,8 @@ def fit_ellipses(binary_mask, thickness=1):
     if len(contours_non_truncated) > 5:   # At least 5 points are required to fit an ellipse
         ellipse = cv2.fitEllipse(contours_non_truncated)
         if not any(math.isnan(param) for param in ellipse[1]):
-            a = ellipse[1][0] / 2 # Semi-major axis
-            b = ellipse[1][1] / 2 # Semi-minor axis
+            a = ellipse[1][0] / 2  # Semi-major axis
+            b = ellipse[1][1] / 2  # Semi-minor axis
 
             # Calculate the estimated circumference of the ellipse
             circumference = ellipse_circumference(a, b)
@@ -42,7 +42,6 @@ def fit_ellipses(binary_mask, thickness=1):
             fitted_ellipse_mask = fitted_ellipse_mask[200:-200, 200:-200]
 
             return ellipse, circumference, fitted_ellipse_mask
-    print("No ellipse found")
     return None, None, None
 
 
@@ -132,12 +131,15 @@ def get_non_truncated_ellipse_contours(ellipse_mask, fov_mask):
     cv2.drawContours(contour_mask, contours_binary, -
                      1, 255, 1)  # Fill the contour
 
-    # Find the intersection between ellipse_mask and contour_image_fov
-    non_truncated_contour_mask = np.logical_and(
-        contour_mask, np.logical_not(contour_image_fov))
+    # Dilate the contours of the fov mask
+    kernel = np.ones((3, 3), np.uint8)
+    contour_image_fov_dil = cv2.dilate(contour_image_fov, kernel, iterations=3)
 
-    # Find contours of the intersection_mask
+    # Force to zero any intersection between ellipse_mask and contour_image_fov
+    contour_mask[contour_image_fov_dil != 0] = 0
+
+    # Find contours of the remaining mask
     non_truncated_contour_mask = np.where(
-        non_truncated_contour_mask != 0, 255, 0).astype(np.uint8)
+        contour_mask != 0, 255, 0).astype(np.uint8)
     contours_non_truncated = get_contour_points(non_truncated_contour_mask)
     return non_truncated_contour_mask, contours_non_truncated
