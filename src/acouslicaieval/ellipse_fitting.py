@@ -40,8 +40,9 @@ def fit_ellipses(binary_mask, thickness=1):
             cv2.ellipse(fitted_ellipse_mask, ellipse, 1, thickness)
             # Remove padding
             fitted_ellipse_mask = fitted_ellipse_mask[200:-200, 200:-200]
-
-            return ellipse, circumference, fitted_ellipse_mask
+            ellipse_center_adjusted = (ellipse[0][0] - 200, ellipse[0][1] - 200)
+            ellipse_adjusted = ((ellipse_center_adjusted, ellipse[1], ellipse[2]))
+            return ellipse_adjusted, circumference, fitted_ellipse_mask
     return None, None, None
 
 
@@ -106,8 +107,8 @@ def get_contour_points(binary_mask):
     if len(contours) == 0:
         print("No contours found in the binary mask.")
         return []
-    # Assuming the largest contour corresponds to the bubble
-    largest_contour = max(contours, key=cv2.contourArea)
+    # Find the largest contour based on perimeter
+    largest_contour = max(contours, key=lambda cnt: cv2.arcLength(cnt, closed=True))
     # Reshape the contour array
     return largest_contour
 

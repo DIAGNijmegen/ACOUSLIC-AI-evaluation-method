@@ -59,6 +59,41 @@ class FetalAbdomenSegmentationEval(ClassificationEvaluation):
         gt = SimpleITK.Mask(gt, mask_fov_itk)
         pred = SimpleITK.Mask(pred, mask_fov_itk)
 
+        # If the frame number equals -1, we assume no segmentation is provided
+        if frame == -1:
+            # If gt is not empty for this case, set all metrics to their worst values
+            if np.any(gt_array):
+                overlap_measures = {
+                    'FalseNegativeError': 267936.,  # Number of pixels within fov of the GT mask as default max value
+                    'FalsePositiveError': 0.,
+                    'MeanOverlap': 0.,
+                    'UnionOverlap': 0.,
+                    'VolumeSimilarity': 0.,
+                    'JaccardCoefficient': 0.,
+                    'DiceCoefficient': 0.,
+                    'DiceCoefficientNearestFrame': 0.,
+                    'NearestAnnotatedFrame': np.nan,
+                    'DiceCoefficientSoft': 0.,
+                    'HausdorffDistance': 744 * MAX_FRAME_TOLERANCE,
+                }        
+            else:
+                # If gt is empty, set all metrics to their best values
+                overlap_measures = {
+                    'FalseNegativeError': 0.,
+                    'FalsePositiveError': 0.,
+                    'MeanOverlap': 0.,
+                    'UnionOverlap': 0.,
+                    'VolumeSimilarity': 1.,
+                    'JaccardCoefficient': 1.,
+                    'DiceCoefficient': 1.,
+                    'DiceCoefficientNearestFrame': 1.,
+                    'NearestAnnotatedFrame': np.nan,
+                    'DiceCoefficientSoft': 1.,
+                    'HausdorffDistance': 0,
+                }
+            return overlap_measures  # Early return
+
+        # Else, if the frame number is within the range of available frames, proceed with evaluation
         # Initialize overlap measures and compute metrics
         overlap_measures = SimpleITK.LabelOverlapMeasuresImageFilter()
         overlap_measures.SetNumberOfThreads(1)
@@ -199,7 +234,7 @@ def compute_wfss(gt_masks, selected_frame_number):
     return 0
 
 
-def calculate_ellipse_circumference_mm(segmentation_mask, pixel_spacing):
+def calculate_ellipse_circumference_mm(segmentation_mask, pixel_spacing, circumference_only=True):
     """
     Fit ellipses to the segmentation mask, calculate the circumferences,
     find the largest circumference, and convert it to millimeters.
@@ -211,16 +246,17 @@ def calculate_ellipse_circumference_mm(segmentation_mask, pixel_spacing):
     Returns:
     float: The largest circumference in millimeters.
     """
-    _, circumference, _ = fit_ellipses(segmentation_mask)
+    ellipse, circumference, fitted_ellipse_mask = fit_ellipses(segmentation_mask)
 
     if circumference is None:
-        return None  # Handle cases with no circumferences
+        return None, None, None  # Handle cases with no circumferences
 
     # Convert the largest circumference from pixels to millimeters
     circumference_mm = pixels_to_mm(
         circumference, pixel_spacing)
-
-    return circumference_mm
+    if circumference_only:
+        return circumference_mm
+    return ellipse, circumference_mm, fitted_ellipse_mask
 
 
 def find_sweep_index(fetal_abdomen_frame_number):
